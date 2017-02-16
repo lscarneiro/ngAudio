@@ -1,14 +1,13 @@
 'use strict';
 angular.module('ngAudio', [])
   .constant('ngAudioDomUid', (function () {
-    var domUid = '';
-    for (var i=0; i<8; i++)
-    {
-      domUid = domUid + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-    }
-    return domUid;//unique id persisting through module life
+      var domUid = '';
+      for (var i = 0; i < 8; i++) {
+          domUid = domUid + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+      }
+      return domUid;//unique id persisting through module life
   })())
-.directive('ngAudio', ['$compile', '$q', 'ngAudio', function($compile, $q, ngAudio) {
+.directive('ngAudio', ['$compile', '$q', 'ngAudio', function ($compile, $q, ngAudio) {
     return {
         restrict: 'AEC',
         scope: {
@@ -17,14 +16,14 @@ angular.module('ngAudio', [])
             currentTime: '=',
             loop: '=',
             clickPlay: '=',
-            disablePreload:'='
+            disablePreload: '='
             //ngAudio:'='
         },
-        controller: ['$scope', '$attrs', '$element', '$timeout', function($scope, $attrs, $element, $timeout) {
+        controller: ['$scope', '$attrs', '$element', '$timeout', function ($scope, $attrs, $element, $timeout) {
 
             /* Loads the sound from destination */
             var audio;
-            function initSound(){
+            function initSound() {
                 audio = ngAudio.load($attrs.ngAudio, $scope);
                 /* Add audio to local scope for modification with nested inputs */
                 $scope.$audio = audio;
@@ -33,17 +32,17 @@ angular.module('ngAudio', [])
                 audio.unbind();
             }
 
-            if (!$scope.disablePreload){
+            if (!$scope.disablePreload) {
                 initSound();
             }
 
 
-            $element.on('click', function() {
+            $element.on('click', function () {
                 if ($scope.clickPlay === false) {
                     return;
                 }
 
-                if ($scope.disablePreload){
+                if ($scope.disablePreload) {
                     initSound();
                 }
 
@@ -56,26 +55,26 @@ angular.module('ngAudio', [])
                 audio.currentTime = $scope.start || 0;
 
                 /* Fixes a bug with Firefox (???) */
-                $timeout(function() {
+                $timeout(function () {
                     audio.play();
                 }, 5);
             });
 
-            $element.on('$destroy', function() {
+            $element.on('$destroy', function () {
                 audio.destroy();
             });
         }]
     };
 }])
 
-.directive('ngAudioHover', ['$compile', '$q', 'ngAudio', function($compile, $q, ngAudio) {
+.directive('ngAudioHover', ['$compile', '$q', 'ngAudio', function ($compile, $q, ngAudio) {
     return {
         restrict: 'AEC',
-        controller: ['$scope', '$attrs', '$element', '$timeout', function($scope, $attrs, $element, $timeout) {
+        controller: ['$scope', '$attrs', '$element', '$timeout', function ($scope, $attrs, $element, $timeout) {
 
             var audio = ngAudio.load($attrs.ngAudioHover, $scope);
 
-            $element.on('mouseover rollover hover', function() {
+            $element.on('mouseover rollover hover', function () {
 
                 /* iOS workaround: Call the play method directly in listener function */
                 audio.audio.play();
@@ -86,16 +85,16 @@ angular.module('ngAudio', [])
 
             });
 
-            $element.on('$destroy', function() {
+            $element.on('$destroy', function () {
                 audio.destroy();
             });
         }]
     };
 }])
 
-.service('localAudioFindingService', ['$q', function($q) {
+.service('localAudioFindingService', ['$q', function ($q) {
 
-    this.find = function(id) {
+    this.find = function (id) {
         var deferred = $q.defer();
         var $sound = document.getElementById(id);
         if ($sound) {
@@ -108,32 +107,30 @@ angular.module('ngAudio', [])
     };
 }])
 
-.service('remoteAudioFindingService', ['$q', 'ngAudioDomUid', function($q, ngAudioDomUid) {
+.service('remoteAudioFindingService', ['$q', 'ngAudioDomUid', function ($q, ngAudioDomUid) {
 
-    this.find = function(url) {
+    this.find = function (url) {
         var deferred = $q.defer();
         var $sound = document.getElementById(ngAudioDomUid);
-        if (!$sound)
-        {
-          var audioTag = document.createElement('audio');
-          audioTag.style.display = 'none';
-          audioTag.id = ngAudioDomUid;
-          audioTag.src = url;
-          document.body.appendChild(audioTag);
-          $sound = document.getElementById(ngAudioDomUid);
-          $sound.load();
+        if (!$sound) {
+            var audioTag = document.createElement('audio');
+            audioTag.style.display = 'none';
+            audioTag.id = ngAudioDomUid;
+            audioTag.src = url;
+            document.body.appendChild(audioTag);
+            $sound = document.getElementById(ngAudioDomUid);
+            $sound.load();
         }
-        else
-        {
-          $sound.pause();
-          $sound.src = url;
-          $sound.load();
+        else {
+            $sound.pause();
+            $sound.src = url;
+            $sound.load();
         }
 
         if ($sound) {
-          deferred.resolve($sound);
+            deferred.resolve($sound);
         } else {
-          deferred.reject(id);
+            deferred.reject(id);
         }
 
         return deferred.promise;
@@ -141,14 +138,14 @@ angular.module('ngAudio', [])
     };
 }])
 
-.service('cleverAudioFindingService', ['$q', 'localAudioFindingService', 'remoteAudioFindingService', function($q, localAudioFindingService, remoteAudioFindingService) {
-    this.find = function(id) {
+.service('cleverAudioFindingService', ['$q', 'localAudioFindingService', 'remoteAudioFindingService', function ($q, localAudioFindingService, remoteAudioFindingService) {
+    this.find = function (id) {
         var deferred = $q.defer();
 
         id = id.replace('|', '/');
 
         localAudioFindingService.find(id)
-            .then(deferred.resolve, function() {
+            .then(deferred.resolve, function () {
                 return remoteAudioFindingService.find(id);
             })
             .then(deferred.resolve, deferred.reject);
@@ -161,16 +158,16 @@ angular.module('ngAudio', [])
     muting: false,
     performance: 25,
     unlock: true,
-    volume:1
+    volume: 1
 })
 
-.factory('NgAudioObject', ['cleverAudioFindingService', '$rootScope', '$interval', '$timeout', 'ngAudioGlobals', function(cleverAudioFindingService, $rootScope, $interval, $timeout, ngAudioGlobals) {
-    return function(id, scope) {
+.factory('NgAudioObject', ['cleverAudioFindingService', '$rootScope', '$interval', '$timeout', 'ngAudioGlobals', function (cleverAudioFindingService, $rootScope, $interval, $timeout, ngAudioGlobals) {
+    return function (id, scope) {
 
-        function twiddle(){
+        function twiddle() {
             audio.play();
             audio.pause();
-            window.removeEventListener("click",twiddle);
+            window.removeEventListener("click", twiddle);
         }
 
         var $audioWatch,
@@ -193,57 +190,62 @@ angular.module('ngAudio', [])
         this.safeId = id.replace('/', '|');
         this.loop = 0;
 
-        this.unbind = function() {
+        this.unbind = function () {
             $observeProperties = false;
         };
 
-        this.play = function() {
+        this.play = function () {
             $willPlay = true;
             return this;
         };
 
         var completeListeners = [];
-        this.complete = function(callback){
+        this.complete = function (callback) {
             completeListeners.push(callback);
         }
 
-        var toFinishListeners = [];
-        this.toFinish = function(secs, callback){
-            toFinishListeners.push({'secs': secs, 'callback': callback});
+        var errorListeners = [];
+        this.onError = function (callback) {
+            errorListeners.push(callback);
         }
 
-        this.pause = function() {
+        var toFinishListeners = [];
+        this.toFinish = function (secs, callback) {
+            toFinishListeners.push({ 'secs': secs, 'callback': callback });
+        }
+
+        this.pause = function () {
             $willPause = true;
         };
 
-        this.restart = function() {
+        this.restart = function () {
             $willRestart = true;
         };
 
-        this.stop = function() {
+        this.stop = function () {
             this.restart();
         };
 
-        this.setVolume = function(volume) {
+        this.setVolume = function (volume) {
             $volumeToSet = volume;
         };
 
-        this.setPlaybackRate = function(rate) {
+        this.setPlaybackRate = function (rate) {
             $newPlaybackRate = rate;
             $willChangePlaybackRate = true;
         };
 
-        this.setMuting = function(muting) {
+        this.setMuting = function (muting) {
             $isMuting = muting;
         };
 
-        this.setProgress = function(progress) {
+        this.setProgress = function (progress) {
             if (audio && audio.duration && isFinite(progress)) {
                 audio.currentTime = audio.duration * progress;
             }
         };
 
-        this.setCurrentTime = function(currentTime) {
+        this.setCurrentTime = function (currentTime) {
             if (audio && audio.duration) {
                 audio.currentTime = currentTime;
             }
@@ -251,7 +253,7 @@ angular.module('ngAudio', [])
 
         this.destroy = $destroy;
 
-        $scope.$on('$destroy', function() {
+        $scope.$on('$destroy', function () {
             $destroy();
         });
 
@@ -274,7 +276,7 @@ angular.module('ngAudio', [])
             if ($destroyed) {
                 return;
             }
-            $audioWatch = $scope.$watch(function() {
+            $audioWatch = $scope.$watch(function () {
                 return {
                     volume: audioObject.volume,
                     currentTime: audioObject.currentTime,
@@ -284,7 +286,7 @@ angular.module('ngAudio', [])
                     playbackRate: audioObject.playbackRate,
                     globalVolume: ngAudioGlobals.volume
                 };
-            }, function(newValue, oldValue) {
+            }, function (newValue, oldValue) {
                 //console.log("ngaudio watch callback for: " + audioObject.id);
                 if (newValue.currentTime !== oldValue.currentTime) {
                     audioObject.setCurrentTime(newValue.currentTime);
@@ -321,32 +323,32 @@ angular.module('ngAudio', [])
         }
 
         cleverAudioFindingService.find(id)
-            .then(function(nativeAudio) {
+            .then(function (nativeAudio) {
                 audio = nativeAudio;
                 if (ngAudioGlobals.unlock) {
 
                     window.addEventListener("click", twiddle);
 
-                    audio.addEventListener('playing', function() {
-                        window.removeEventListener("click",twiddle);
+                    audio.addEventListener('playing', function () {
+                        window.removeEventListener("click", twiddle);
                     });
 
                 }
 
-                audio.addEventListener('canplay', function() {
+                audio.addEventListener('canplay', function () {
                     audioObject.canPlay = true;
                 });
 
-            }, function(error) {
+            }, function (error) {
                 audioObject.error = true;
                 console.warn(error);
             });
 
 
         var interval = $interval(checkWatchers, ngAudioGlobals.performance);
-        $intervalWatch = $scope.$watch(function(){
+        $intervalWatch = $scope.$watch(function () {
             return ngAudioGlobals.performance;
-        },function(){
+        }, function () {
             $interval.cancel(interval);
             interval = $interval(checkWatchers, ngAudioGlobals.performance);
         })
@@ -364,7 +366,12 @@ angular.module('ngAudio', [])
                 }
 
                 if ($willPlay) {
-                    audio.play();
+                    audio.play().catch(function (e) {
+                        audioObject.error = true;
+                        errorListeners.forEach(function (listener) {
+                            listener(e, audioObject);
+                        });
+                    });
                     $willPlay = false;
                 }
 
@@ -393,23 +400,23 @@ angular.module('ngAudio', [])
                     audioObject.currentTime = audio.currentTime;
                     audioObject.duration = audio.duration;
                     audioObject.remaining = audio.duration - audio.currentTime;
-					audioObject.progress = 0; //We set initial value to 0
+                    audioObject.progress = 0; //We set initial value to 0
                     audioObject.paused = audio.paused;
                     audioObject.src = audio.src;
 
-					//After we check if progress is bigger than 0, and we set
+                    //After we check if progress is bigger than 0, and we set
                     var tempProgress = (audio.currentTime / audio.duration);
-                    if(tempProgress  > 0 ){
-                      audioObject.progress = tempProgress;
+                    if (tempProgress > 0) {
+                        audioObject.progress = tempProgress;
                     }
 
                     if (audioObject.currentTime >= audioObject.duration) {
-                        completeListeners.forEach(function(listener){
+                        completeListeners.forEach(function (listener) {
                             listener(audioObject);
                         })
                     }
 
-                    toFinishListeners.forEach(function(listener) {
+                    toFinishListeners.forEach(function (listener) {
                         if ((audioObject.duration - audioObject.currentTime) <= listener.secs) {
                             listener.callback(audioObject);
                             toFinishListeners.shift();
@@ -439,42 +446,42 @@ angular.module('ngAudio', [])
         }
     };
 }])
-.service('ngAudio', ['NgAudioObject', 'ngAudioGlobals', function(NgAudioObject, ngAudioGlobals) {
-    this.play = function(id, scope) {
+.service('ngAudio', ['NgAudioObject', 'ngAudioGlobals', function (NgAudioObject, ngAudioGlobals) {
+    this.play = function (id, scope) {
 
         var audio = new NgAudioObject(id, scope);
         audio.play();
         return audio;
     };
 
-    this.load = function(id, scope) {
+    this.load = function (id, scope) {
         return new NgAudioObject(id, scope);
     };
 
-    this.mute = function() {
+    this.mute = function () {
         ngAudioGlobals.muting = true;
     };
 
-    this.unmute = function() {
+    this.unmute = function () {
         ngAudioGlobals.muting = false;
     };
 
-    this.toggleMute = function() {
+    this.toggleMute = function () {
         ngAudioGlobals.muting = !ngAudioGlobals.muting;
     };
 
-    this.setUnlock = function(unlock) {
-      ngAudioGlobals.unlock = unlock;
+    this.setUnlock = function (unlock) {
+        ngAudioGlobals.unlock = unlock;
     };
 
-    this.setGlobalVolume = function(globalVolume) {
-      ngAudioGlobals.volume = globalVolume;
+    this.setGlobalVolume = function (globalVolume) {
+        ngAudioGlobals.volume = globalVolume;
     };
 }])
-.filter("trackTime", function(){
+.filter("trackTime", function () {
     /* Conveniently takes a number and returns the track time */
 
-    return function(input){
+    return function (input) {
 
         var totalSec = Math.floor(input | 0);
 
@@ -509,11 +516,11 @@ angular.module('ngAudio', [])
             seconds = totalSec - (minutes * 60);
 
             if (minutes.toString().length == 1) {
-                 minutes = "0" + (Math.floor(totalSec / 60)).toString();
+                minutes = "0" + (Math.floor(totalSec / 60)).toString();
             }
 
             if (seconds.toString().length == 1) {
-                 seconds = "0" + (totalSec - (minutes * 60)).toString();
+                seconds = "0" + (totalSec - (minutes * 60)).toString();
             }
 
             output = minutes + ":" + seconds;
@@ -530,7 +537,7 @@ angular.module('ngAudio', [])
 
         }
 
-        if (typeof Number.isNaN === "function" && Number.isNaN(output)){
+        if (typeof Number.isNaN === "function" && Number.isNaN(output)) {
             debugger;
         }
 
